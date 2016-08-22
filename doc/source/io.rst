@@ -38,7 +38,7 @@ object.
     * :ref:`read_json<io.json_reader>`
     * :ref:`read_msgpack<io.msgpack>` (experimental)
     * :ref:`read_html<io.read_html>`
-    * :ref:`read_gbq<io.bigquery_reader>` (experimental)
+    * :ref:`read_gbq<io.bigquery>` (experimental)
     * :ref:`read_stata<io.stata_reader>`
     * :ref:`read_sas<io.sas_reader>`
     * :ref:`read_clipboard<io.clipboard>`
@@ -53,7 +53,7 @@ The corresponding ``writer`` functions are object methods that are accessed like
     * :ref:`to_json<io.json_writer>`
     * :ref:`to_msgpack<io.msgpack>` (experimental)
     * :ref:`to_html<io.html>`
-    * :ref:`to_gbq<io.bigquery_writer>` (experimental)
+    * :ref:`to_gbq<io.bigquery>` (experimental)
     * :ref:`to_stata<io.stata_writer>`
     * :ref:`to_clipboard<io.clipboard>`
     * :ref:`to_pickle<io.pickle>`
@@ -4428,16 +4428,11 @@ DataFrame with a shape and data types derived from the source table.
 Additionally, DataFrames can be inserted into new BigQuery tables or appended
 to existing tables.
 
-You will need to install some additional dependencies:
-
-- Google's `python-gflags <https://github.com/google/python-gflags/>`__
-- `httplib2 <http://pypi.python.org/pypi/httplib2>`__
-- `google-api-python-client <http://github.com/google/google-api-python-client>`__
-
 .. warning::
 
    To use this module, you will need a valid BigQuery account. Refer to the
-   `BigQuery Documentation <https://cloud.google.com/bigquery/what-is-bigquery>`__ for details on the service itself.
+   `BigQuery Documentation <https://cloud.google.com/bigquery/what-is-bigquery>`__
+   for details on the service itself.
 
 The key functions are:
 
@@ -4451,14 +4446,50 @@ The key functions are:
 
 .. currentmodule:: pandas
 
-.. _io.bigquery_reader:
+
+Supported Data Types
+++++++++++++++++++++
+
+Pandas supports these all `BigQuery data types <https://cloud.google.com/bigquery/data-types>`__:
+``STRING``, ``INTEGER`` (64bit), ``FLOAT`` (64 bit), ``BOOLEAN`` and
+``TIMESTAMP`` (microsecond precision). Data types ``BYTES`` and ``RECORD``
+are not supported.
+
+Integer and boolean ``NA`` handling
++++++++++++++++++++++++++++++++
+
+.. versionadded:: 0.19
+
+Since all columns in BigQuery queries are nullable, and NumPy lacks of ``NA``
+support for integer and boolean types, this module will store ``INTEGER`` or
+``BOOLEAN`` columns with at least one ``NULL`` value as ``dtype=object``.
+Otherwise those columns will be stored as ``dtype=int64`` or ``dtype=bool``
+respectively.
+
+This is opposite to default pandas behaviour which will promote integer
+type to float in order to store NAs. See the :ref:`gotchas<gotchas.intna>`
+for detailed explaination.
+
+While this trade-off works well for most cases, it breaks down for storing
+values greater than 2**53. Such values in BigQuery can represent identifiers
+and unnoticed precision lost for identifier is what we want to avoid.
+
+Dependencies
+++++++++++++
+
+This module requires these additional dependencies:
+
+- `httplib2 <http://pypi.python.org/pypi/httplib2>`__
+- `google-api-python-client <http://github.com/google/google-api-python-client>`__
+- `oauth2client <https://github.com/google/oauth2client>`__.
+
 
 .. _io.bigquery_authentication:
 
 Authentication
 ''''''''''''''
 
-.. versionadded:: 0.18.0
+.. versionadded:: 0.18
 
 Authentication to the Google ``BigQuery`` service is via ``OAuth 2.0``.
 Is possible to authenticate with either user account credentials or service account credentials.
@@ -4466,7 +4497,7 @@ Is possible to authenticate with either user account credentials or service acco
 Authenticating with user account credentials is as simple as following the prompts in a browser window
 which will be automatically opened for you. You will be authenticated to the specified
 ``BigQuery`` account using the product name ``pandas GBQ``. It is only possible on local host.
-The remote authentication using user account credentials is not currently supported in Pandas.
+The remote authentication using user account credentials is not currently supported in pandas.
 Additional information on the authentication mechanism can be found
 `here <https://developers.google.com/identity/protocols/OAuth2#clientside/>`__.
 
@@ -4475,16 +4506,12 @@ is particularly useful when working on remote servers (eg. jupyter iPython noteb
 Additional information on service accounts can be found
 `here <https://developers.google.com/identity/protocols/OAuth2#serviceaccount>`__.
 
-You will need to install an additional dependency: `oauth2client <https://github.com/google/oauth2client>`__.
-
 Authentication via ``application default credentials`` is also possible. This is only valid
 if the parameter ``private_key`` is not provided. This method also requires that
 the credentials can be fetched from the environment the code is running in.
 Otherwise, the OAuth2 client-side authentication is used.
 Additional information on
 `application default credentials <https://developers.google.com/identity/protocols/application-default-credentials>`__.
-
-.. versionadded:: 0.19.0
 
 .. note::
 
@@ -4496,6 +4523,7 @@ Additional information on
    A private key can be obtained from the Google developers console by clicking
    `here <https://console.developers.google.com/permissions/serviceaccounts>`__. Use JSON key type.
 
+.. _io.bigquery_reader:
 
 Querying
 ''''''''
@@ -4538,7 +4566,6 @@ destination DataFrame as well as a preferred column order as follows:
     <https://cloud.google.com/bigquery/sql-reference/>`__
 
 .. _io.bigquery_writer:
-
 
 Writing DataFrames
 ''''''''''''''''''
@@ -4629,6 +4656,8 @@ For example:
    often as the service seems to be changing and evolving. BiqQuery is best for analyzing large
    sets of data quickly, but it is not a direct replacement for a transactional database.
 
+.. _io.bigquery_create_tables:
+
 Creating BigQuery Tables
 ''''''''''''''''''''''''
 
@@ -4657,6 +4686,7 @@ produce the dictionary representation schema of the specified pandas DataFrame.
    you must wait 2 minutes before streaming data into the table. As a workaround, consider creating
    the new table with a different name. Refer to
    `Google BigQuery issue 191 <https://code.google.com/p/google-bigquery/issues/detail?id=191>`__.
+
 
 .. _io.stata:
 
