@@ -151,7 +151,9 @@ class GbqConnector(object):
         self.project_id = project_id
         self.reauth = reauth
         self.verbose = verbose
-        self.private_key = private_key
+        self.private_key = private_key or\
+            '/home/hdumodel/.google_api_oauth2_credentials/service_accounts/{}.json'\
+            .format(project_id) 
         self.dialect = dialect
         self.credentials = self.get_credentials()
         self.service = self.get_service()
