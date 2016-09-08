@@ -8,6 +8,8 @@ import time
 import sys
 
 import numpy as np
+from pyfiglet import Figlet
+from collections import OrderedDict
 
 from distutils.version import StrictVersion
 from pandas import compat
@@ -157,6 +159,18 @@ class GbqConnector(object):
         self.dialect = dialect
         self.credentials = self.get_credentials()
         self.service = self.get_service()
+
+        # pyfiglet staff for price output
+        self.__figlets = OrderedDict([
+            (0.1, Figlet(font='straight')),
+            (0.5, Figlet(font='starwars')), 
+            (1.0, Figlet(font='blocks')),
+            (2.0, Figlet(font='fraktur')),
+            (5.0, Figlet(font='doh'))])
+
+
+        for k in self.__figlets:
+            self.__figlets[k].width=120
 
     def get_credentials(self):
         if self.private_key:
@@ -324,6 +338,17 @@ class GbqConnector(object):
             num /= 1024.0
         return fmt % (num, 'Y', suffix)
 
+    def price_for(self, bytes_num):
+        figlet = None
+        price = 5. * bytes_num / 2**40 # current tariff is 5$/TB
+
+        for (k,v) in self.__figlets.items():
+            if price > k:
+                figlet = v
+
+        text_price = '{0:.2f} $'.format(price)
+        return figlet and '\n' + figlet.renderText(text_price) or text_price
+
     def get_service(self):
         import httplib2
         try:
@@ -432,8 +457,9 @@ class GbqConnector(object):
             else:
                 bytes_processed = int(query_reply.get(
                     'totalBytesProcessed', '0'))
-                self._print('Query done.\nProcessed: {}\n'.format(
-                    self.sizeof_fmt(bytes_processed)))
+                self._print('Query done.\nProcessed: {}\nPrice: {}'.format(
+                    self.sizeof_fmt(bytes_processed),
+                    self.price_for(bytes_processed)))
 
             self._print('Retrieving results...')
 
